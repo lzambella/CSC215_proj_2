@@ -45,8 +45,8 @@ public class Bill implements Serializable {
         return amount;
     }
 
-    public String[] toArray() {
-        return new String[] {issueDate.toString(), company, description, ""+amount, dueDate.toString()  };
+    public Object[] toArray() {
+        return new Object[] {paymentStatus, issueDate, company, description, amount, dueDate  };
     }
 
     public User getIssuer() {

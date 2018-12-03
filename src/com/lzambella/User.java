@@ -17,7 +17,6 @@ public class User implements Serializable {
 
     private Bank bank;      // Bank for the user
     private Vector<Bill> bills = new Vector<Bill>();
-    private String password;
     /**
      *
      * @param uName Username for the new user
@@ -30,7 +29,6 @@ public class User implements Serializable {
         username = uName;
         bank = new Bank("0000", 0.00);
         hashedPassword = hashFunction(pWord);
-        password = pWord;
     }
 
     public User() throws NoSuchAlgorithmException, InvalidKeySpecException {

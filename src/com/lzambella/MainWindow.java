@@ -4,13 +4,14 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Vector;
 
 public class MainWindow extends JFrame {
     private JTable dataTable;
     // column names for bills
-    private String[] columnNames = {"Date issued", "Company", "Description", "Amount", "Due date"};
+    private String[] columnNames = {"ID", "Status", "Date issued", "Company", "Description", "Amount", "Due date"};
     private DefaultTableModel model;
     private User authUser;
     private Vector<User> userList;
@@ -20,6 +21,7 @@ public class MainWindow extends JFrame {
         authUser = auth;
         this.userList = userList;
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setTitle("Authenticated as " + authUser.getUserName() + ". Funds: " + authUser.getBank().getAmount());
 
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("Settings");
@@ -51,10 +53,16 @@ public class MainWindow extends JFrame {
         add(dataTable.getTableHeader(), BorderLayout.PAGE_START);
         add(dataTable, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.PAGE_END);
-
+        dataTable.setAutoCreateRowSorter(true);
         payBillButton.addActionListener(e -> {
             int selectedIndex = dataTable.getSelectedRow();
-            payBillWindow(selectedIndex);
+            // get the ID of the bill in the table display
+            int bill_ID = (int) model.getValueAt(selectedIndex, 0);
+
+            if (authUser.getBills().get(selectedIndex).isPaid())
+                JOptionPane.showMessageDialog(this, String.format("Bill had already been paid."));
+            else
+                payBillWindow(bill_ID);
         });
 
         sendInvoiceButton.addActionListener(e -> {
@@ -86,7 +94,7 @@ public class MainWindow extends JFrame {
         double balance = authUser.getBank().getAmount();
         JLabel userBalanceLabel = new JLabel(String.format("Balance on account: %.2f", balance));
 
-        JButton payBillButton = new JButton("Pay Bill");
+        JButton payBillButton = new JButton("Pay Selected Bill");
 
         JFrame frame = new JFrame();
         frame.setLayout(new GridLayout(7,1));
@@ -110,7 +118,7 @@ public class MainWindow extends JFrame {
                 temp.getBank().addFunds(billAmt);               // Give the issuer the money
                 tempBill.setBillPaid();                         // set the bill as paid
                 AppServer.saveData();
-                model.removeRow(index);
+                //model.removeRow(index);
                 frame.setVisible(false);
             }
         });
@@ -135,7 +143,7 @@ public class MainWindow extends JFrame {
         JButton sendInvoice = new JButton("Send Invoice");
 
         frame.setLayout(new GridLayout(4, 2));
-        frame.setMinimumSize(new Dimension(400,600));
+        frame.setMinimumSize(new Dimension(400,200));
 
         frame.add(descriptionLabel);
         frame.add(descriptionText);
@@ -157,7 +165,6 @@ public class MainWindow extends JFrame {
                 Bill tempBill = new Bill(issueDate, issueDate, company, description, amt, authUser); // create the new bill
                 receiptant.issueBill(tempBill); // add the bill to the receiving user
                 JOptionPane.showMessageDialog(frame, String.format("Issued the bill successfully"));
-
                 AppServer.saveData();
                 frame.setVisible(false);
             } catch (Exception x) {
@@ -171,13 +178,14 @@ public class MainWindow extends JFrame {
         JFrame frame = new JFrame("Add funds");
         JTextField field = new JTextField();
         JButton button = new JButton("Add funds");
-        frame.setMinimumSize(new Dimension(200,100));
+        frame.setMinimumSize(new Dimension(300,75));
         frame.setLayout(new GridLayout(1, 2));
         frame.add(field);
         frame.add(button);
         frame.setVisible(true);
         button.addActionListener(e -> {
             authUser.getBank().addFunds(Double.parseDouble(field.getText()));
+            this.setTitle("Authenticated as " + authUser.getUserName() + ". Funds: " + authUser.getBank().getAmount());
             AppServer.saveData();
             frame.setVisible(false);
         });
@@ -186,13 +194,23 @@ public class MainWindow extends JFrame {
     /*
     * Gets all the bills for the user
      */
-    private String[][] getData(Vector<Bill> bills) {
+    private Object[][] getData(Vector<Bill> bills) {
         int dataAmount = bills.size(); // Get number of rows datatable will have
-        String[][] data = new String[dataAmount][5];
+        Object[][] data = new Object[dataAmount][7];
         int shamt = 0;
+
         for (int i = 0; i < dataAmount; i++) {
-            if (bills.get(i).isPaid()) continue;
-            data[i] = bills.get(i).toArray();
+            // initialize a temp object array to bind data to the data table
+            Object[] tmp = new Object[7];
+            tmp[0] = i;
+            tmp[1] = bills.get(i).isPaid() ? "Paid" : "Not Paid";
+            tmp[2] = bills.get(i).getIssueDate();
+            tmp[3] = bills.get(i).getCompany();
+            tmp[4] = bills.get(i).getDescription();
+            tmp[5] = bills.get(i).getAmount();
+            tmp[6] = bills.get(i).getDueDate();
+
+            data[i] = tmp;
         }
         return data;
     }
